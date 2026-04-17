@@ -19,6 +19,45 @@
 			c.data.notes = r.data.notes
 		})
 	})
+	
+	c.snNoteUpdate = function(name, noteId){
+		for(var i = 0; i< c.data.notes.length;i++){
+				if(c.data.notes[i].sys_id == noteId){
+					if(name.data.record.note){
+						c.data.notes[i].note = name.data.record.note.display_value;
+					}else if(name.data.record.title){
+						c.data.notes[i].title = name.data.record.title.display_value;
+					}
+					c.server.update();
+				}
+			
+		}
+	}
+	c.snNoteDelete = function (noteId){
+		c.server.get({
+			action:'deleteNote',
+			noteId: noteId
+		}).then(function(r){
+			c.data.notes = r.data.notes
+		})
+		
+	}
+	
+	
+	
+
+	spUtil.recordWatch($scope, "x_snc_createnotes_note",'', function(name) {
+		if(name.data.operation == 'insert'){
+			c.server.refresh();
+		}
+		if(name.data.operation == "update"){
+			console.log(name.data);
+			c.snNoteUpdate(name, name.data.sys_id);
+		}
+		if(name.data.operation == 'delete'){
+			c.snNoteDelete(name.data.sys_id);
+		}
+	});
 
 };]]></client_script>
         <controller_as>c</controller_as>
@@ -33,7 +72,7 @@
         <internal>false</internal>
         <link><![CDATA[function link(scope, element, attrs, controller) {  }]]></link>
         <name>Notes List 1</name>
-        <option_schema/>
+        <option_schema>[{"name":"maximum_records_to_display","section":"Presentation","default_value":"5","label":"Maximum records to display","type":"integer"},{"name":"title","section":"Presentation","default_value":"Notes","label":"Title","type":"string"}]</option_schema>
         <public>false</public>
         <roles/>
         <script><![CDATA[(function() {
@@ -43,6 +82,7 @@
 	var noteGR = new GlideRecord('x_snc_createnotes_note');
 	noteGR.addQuery('user', gs.getUser().getID());
 	noteGR.orderByDesc('sys_created_on');
+	noteGR.setLimit(options.maximum_records_to_display);
 	noteGR.query();
 	while (noteGR.next()) {
 		var noteObj = {};
@@ -54,25 +94,38 @@
 		data.notes.push(noteObj);
 	}
 	
+	if(input && input.action == 'deleteNote'){
+		var grNote = new GlideRecord('x_snc_createnotes_note');
+		if(grNote.get(input.noteId)){
+			grNote.deleteRecord();
+		}
+		
+	}
+	
 })();]]></script>
         <servicenow>false</servicenow>
         <sys_class_name>sp_widget</sys_class_name>
         <sys_created_by>dung.nguyen</sys_created_by>
         <sys_created_on>2026-04-16 03:49:11</sys_created_on>
         <sys_id>fc22a55dc3548b10981ff5fc05013182</sys_id>
-        <sys_mod_count>18</sys_mod_count>
+        <sys_mod_count>40</sys_mod_count>
         <sys_name>Notes List 1</sys_name>
         <sys_package display_value="CreateNotes" source="x_snc_createnotes">df5fd9a5090232007f44e1046c8ff69f</sys_package>
         <sys_policy/>
         <sys_scope display_value="CreateNotes">df5fd9a5090232007f44e1046c8ff69f</sys_scope>
         <sys_update_name>sp_widget_fc22a55dc3548b10981ff5fc05013182</sys_update_name>
         <sys_updated_by>dung.nguyen</sys_updated_by>
-        <sys_updated_on>2026-04-16 07:55:05</sys_updated_on>
+        <sys_updated_on>2026-04-17 03:48:13</sys_updated_on>
         <template><![CDATA[<div class="panel panel-default">
   <div class="panel-heading clearfix">
-    <h3 class="panel-title pull-left">
-      ${Notes}
+     <h3 class="panel-title pull-left">
+      {{::c.options.title}}
     </h3>
+    <div class="pull-right">
+      <button type="button" class=" px-4 btn btn-primary">Add Note</button>
+      <button type="button" class="btn btn-danger">Delete</button>
+    </div>
+
   </div>
   <div class="list-group">
     <a class="list-group-item" ng-click="c.selectedItem($index)" ng-repeat="note in data.notes">
